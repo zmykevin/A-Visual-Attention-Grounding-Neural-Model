@@ -4,4 +4,4 @@ This code repository contains the implementation of our research project: _A Vis
 
 We introduce a novel multimodal machine translation model that utilizes parallel visual and texture information. Our model jointly optimizes learning of a shared visual-language embedding and translating languages. It does this with the aid of a visual attention grounding mechanism which links the visual semantics in the image with the corresponding textual se-
 mantics.
-
+![](https://github.com/zmykevin/A-Visual-Attention-Grounding-Neural-Model/blob/master/AGV-NMT.jpg)
