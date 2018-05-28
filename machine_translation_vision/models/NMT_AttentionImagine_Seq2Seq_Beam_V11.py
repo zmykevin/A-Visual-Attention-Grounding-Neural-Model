@@ -77,7 +77,7 @@ class NMT_AttentionImagine_Seq2Seq_Beam_V11(nn.Module):
     def reset_parameters(self):
         for name, param in self.named_parameters():
             if param.requires_grad and 'bias' not in name and param.data.dim() > 1:
-                nn.init.kaiming_normal(param.data)
+                nn.init.kaiming_normal_(param.data)
     
     def forward(self,src_var,src_lengths,tgt_var,im_var,teacher_force_ratio=1.0,max_length=80, criterion_mt=None, criterion_vse=None):
         '''
@@ -268,7 +268,7 @@ class NMT_AttentionImagine_Seq2Seq_Beam_V11(nn.Module):
                 if n_fini == batch_size*beam_size:
                     break
 
-                #Get the decoder fo the next iteration(batch_size*beam_size,1)
+                #Get the decoder for the next iteration(batch_size*beam_size,1)
                 decoder_input = Variable(cur_tokens,volatile=True)
                 decoder_hidden = decoder_hidden[:,tile,:] #This operation will create a decoder_hidden states with size [batch_size*beam_size,H]
                 

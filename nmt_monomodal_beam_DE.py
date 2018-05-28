@@ -15,6 +15,7 @@ from bleu import *
 from machine_translation_vision.models import NMT_Seq2Seq_Beam, LIUMCVC_Seq2Seq_Beam, NMT_Seq2Seq_Beam_V2
 #from machine_translation_vision.models import LIUMCVC_Seq2Seq
 from train import *
+from machine_translation_vision.meteor.meteor import Meteor
 
 import time
 import random
@@ -23,6 +24,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
+import argparse
 
 use_cuda = torch.cuda.is_available()
 print("Whether GPU is available: {}".format(use_cuda))
@@ -32,6 +34,44 @@ SOS_token = 2
 EOS_token = 3
 UNK_token = 1
 MAX_LENGTH = 80 #We will abandon any sentence that is longer than this length
+
+#Initialize the terms from argparse
+PARSER = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+PARSER.add_argument('--data_path',required=True, help='path to multimodal machine translation dataset')
+PARSER.add_argument('--trained_model_path',required=True, help='path to save the trained model and output')
+PARSER.add_argument('--sr',type=str,required=True,help='the source language')
+PARSER.add_argument('--tg',type=str,required=True, help='the target language')
+#Network Structured
+PARSER.add_argument('--embedding_size',type=int,default=256,help='embedding layer size for both encoder and decoder')
+PARSER.add_argument('--hidden_size',type=int,default=512,help='hidden state size for both encoder and decoder')
+PARSER.add_argument('--shared_embedding_size',type=int,default=512, help='the shared space size to project decoder/encoder hidden state and image features')
+PARSER.add_argument('--n_layers',type=int,default=1, help='number of stacked layer for encoder and decoder')
+PARSER.add_argument('--tied_emb',action='store_false',help='whether to tie the embdding layers weights to the output layer')
+
+#Dropout
+PARSER.add_argument('--dropout_rnn',type=float,default=0.0, help='the dropout applied to the rnn layer')
+PARSER.add_argument('--dropout_emb',type=float,default=0.3, help='the dropout applied ot the embedding layer of encoder embedidng state')
+PARSER.add_argument('--dropout_ctx',type=float,default=0.5, help='the dropout applied to the context vectors of encoder')
+PARSER.add_argument('--dropout_out',type=float,default=0.5, help='the dropout applied to the output layer of the decoder')
+
+#Training Setting
+PARSER.add_argument('--batch_size',type=int, default=32, help='batch size during training')
+PARSER.add_argument('--eval_batch_size',type=int, default=16, help='batch size during evaluation')
+PARSER.add_argument('--learning_rate_mt',type=float,default=0.0004, help='learning rate for machien translation task')
+PARSER.add_argument('--weight_decay',type=float,default=0.00001, help='weight decay applied to optimizer')
+PARSER.add_argument('--loss_w',type=float,default=0.99, help='is using the mixed objective, this assigns the weight for mt and vse objective function separate.')
+PARSER.add_argument('--p_mt', type=float, default=0.9, help='The probability to run machine translation task instead of vse task, when we train the tasks separately')
+PARSER.add_argument('--beam_size',type=int, default=12, help='The beam size for beam search')
+PARSER.add_argument('--n_epochs', type=int, default=100, help='maximum number of epochs to run')
+PARSER.add_argument('--print_every',type=int, default=100, help='print frequency')
+PARSER.add_argument('--eval_every',type=int, default=1000, help='evaluation frequency')
+PARSER.add_argument('--save_every',type=int, default=10000, help='model save frequency')
+PARSER.add_argument('--teacher_force_ratio',type=float,default=0.8, help='whether to apply teacher_force_ratio during trianing')
+PARSER.add_argument('--clip',type=float,default=1.0, help='gradient clip applied duing optimization')
+PARSER.add_argument('--patience',type=int,default=10, help='early_stop_patience')
+
+#Get all the argument
+ARGS = PARSER.parse_args()
 
 ## Helper Functions to Print Time Elapsed and Estimated Time Remaining, give the current time and progress
 def as_minutes(s):
@@ -60,12 +100,14 @@ def save_plot_compare(point_1, point_2,label_1,label_2,x_axis, save_path, y_labe
 
 #############################################################Load the Dataset#######################################################
 #Load the Dataset
-data_path = '/home/zmykevin/machine_translation_vision/dataset/Multi30K_DE_BPE_Kevin'
-trained_model_output_path = '/home/zmykevin/machine_translation_vision/code/mtv_trained_model/WMT17/nmt_DE_20_4'
-source_language = 'en'
-target_language = 'de'
+data_path = ARGS.data_path
+trained_model_output_path = ARGS.trained_model_path
+source_language = ARGS.sr
+target_language = ARGS.tg
 BPE_dataset_suffix = '.norm.tok.lc.10000bpe'
 dataset_suffix = '.norm.tok.lc'
+#Initilalize a Meteor Scorer
+Meteor_Scorer = Meteor(target_language)
 
 #Create the directory for the trained_model_output_path
 if not os.path.isdir(trained_model_output_path):
@@ -145,33 +187,36 @@ test_data_index = create_data_index(test_data,s_word2id,t_word2id)
 val_y_ref = [[d[1].split()] for d in val_ori_data]
 test_y_ref = [[d[1].split()] for d in test_ori_data]
 
+#Define val_y_ref_meteor and test_y_ref_meteor
+val_y_ref_meteor = dict((key,[value[1]]) for key,value in enumerate(val_ori_data))
+test_y_ref_meteor = dict((key,[value[1]]) for key,value in enumerate(test_ori_data))
 
 #Network Structure
-embedding_size = 256
-hidden_size = 512
-n_layers = 1
-tied_emb = True
+embedding_size = ARGS.embedding_size
+hidden_size = ARGS.hidden_size
+n_layers = ARGS.n_layers
+tied_emb = ARGS.tied_emb
 
 #Dropout
-dropout_rnn = 0.0
-dropout_emb = 0.3
-dropout_ctx = 0.5
-dropout_out = 0.5
+dropout_rnn = ARGS.dropout_rnn
+dropout_emb = ARGS.dropout_emb
+dropout_ctx = ARGS.dropout_ctx
+dropout_out = ARGS.dropout_rnn
 
 #Training Setting
-batch_size = 32
-eval_batch_size = 16
+batch_size = ARGS.batch_size
+eval_batch_size = ARGS.eval_batch_size
 batch_num = math.floor(len(train_data_index)/batch_size)
-learning_rate = 0.0004
-weight_decay = 0.00001
-beam_size = 12
-n_epochs = 100
-print_every = 100
-eval_every = 1000
-save_every = 10000
-teacher_forcing_ratio = 0.8
-clip = 1.0
-patience = 10
+learning_rate = ARGS.learning_rate_mt
+weight_decay = ARGS.weight_decay
+beam_size = ARGS.beam_size
+n_epochs = ARGS.n_epochs
+print_every = ARGS.print_every
+eval_every = ARGS.eval_every
+save_every = ARGS.save_every
+teacher_forcing_ratio = ARGS.teacher_force_ratio
+clip = ARGS.clip
+patience = ARGS.patience
 
 #Initialize models
 input_size = len(s_word2id)+1
@@ -263,6 +308,7 @@ print("Begin Training")
 #Initialize some parameters fro this training process
 iter_count = 0
 best_bleu = 0
+best_meteor = 0
 best_loss = 1000
 early_stop=patience
 for epoch in range(1,n_epochs + 1):
@@ -313,7 +359,12 @@ for epoch in range(1,n_epochs + 1):
             lr_decay_scheduler.step(val_loss_mean)
 
             val_bleu = compute_bleu(val_y_ref,val_translations)
-            print("dev_loss: {}, dev_bleu: {}".format(val_loss_mean,val_bleu[0]))
+
+            #Compute the METEOR Score
+            val_translations_meteor = dict((key,[' '.join(value)]) for key,value in enumerate(val_translations))
+            val_meteor = Meteor_Scorer.compute_score(val_y_ref_meteor,val_translations_meteor)
+
+            print("dev_loss: {}, dev_bleu: {},dev_meteor: {}".format(val_loss_mean,val_bleu[0],val_meteor[0]))
 
             #Randomly Pick a sentence and translate it to the target language. 
             sample_source, sample_ref, sample_output = random_sample_display(val_ori_data,val_translations)
@@ -335,11 +386,17 @@ for epoch in range(1,n_epochs + 1):
                 early_stop = patience
             else:
                 early_stop -= 1
+            
+            if val_meteor[0] > best_meteor:
+                torch.save(baseline_model,os.path.join(trained_model_output_path,'nmt_wmt_baseline_trained_model_best_METEOR.pt'))
+                #update the best_bleu score
+                best_meteor = val_meteor[0]
 
             #Print out the best loss and best BLEU so far
             print("Current Early_Stop Counting: {}".format(early_stop))
             print("Best Loss so far is: {}".format(best_loss))
             print("Best BLEU so far is: {}".format(best_bleu))
+            print("Best METEOR so far is: {}".format(best_meteor))
 
             #Schedule a learning rate decay
             #lr_decay_scheduler.step(val_loss_mean)
@@ -375,8 +432,13 @@ for test_x,test_y,test_x_lengths,test_y_lengths,test_sorted_index in data_genera
 
 #Compute the test bleu score
 test_bleu = compute_bleu(test_y_ref,test_translations)
-print("test_bleu from the best BLEU model: {}".format(test_bleu[0]))
+#Compute the METEOR Score
+test_translations_meteor = dict((key,[' '.join(value)]) for key,value in enumerate(test_translations))
+test_meteor = Meteor_Scorer.compute_score(test_y_ref_meteor,test_translations_meteor)
 
+print("Test BLEU score from the best BLEU model: {}".format(test_bleu[0]))
+print("Test METEOR score from the best BLEU model: {}".format(test_meteor[0]))
+print("\n")
 #Save the translation prediction to the trained_model_path
 test_prediction_path = os.path.join(trained_model_output_path,'test_2017_prediction_best_BLEU.'+target_language)
 
@@ -386,11 +448,11 @@ with open(test_prediction_path,'w') as f:
 
 #Evalute the final results with nmtpy-coco-metrics
 ground_truth_path = os.path.join(data_path,'test'+dataset_suffix+'.'+target_language)
-
+"""
 print("Full evaluation results with best BLEU Model:")
 #Execute nmtpy-coco-metrics to get the outputs
 os.system('nmtpy-coco-metrics {} -l {} -r {}'.format(test_prediction_path,target_language,ground_truth_path))
-
+"""
 ######################Use the best Loss Model to Evaluate########################################################
 #Load the Best Loss Model
 best_loss_model = torch.load(os.path.join(trained_model_output_path,'nmt_wmt_baseline_trained_model_best_loss.pt'))
@@ -410,8 +472,13 @@ for test_x,test_y,test_x_lengths,test_y_lengths,test_sorted_index in data_genera
 
 #Compute the test bleu score
 test_bleu = compute_bleu(test_y_ref,test_translations)
-print("test_bleu from the best loss model: {}".format(test_bleu[0]))
+#Compute the METEOR Score
+test_translations_meteor = dict((key,[' '.join(value)]) for key,value in enumerate(test_translations))
+test_meteor = Meteor_Scorer.compute_score(test_y_ref_meteor,test_translations_meteor)
 
+print("Test BLEU score from the best LOSS model: {}".format(test_bleu[0]))
+print("Test METEOR score from the best LOSS model: {}".format(test_meteor[0]))
+print("\n")
 #Save the translation prediction to the trained_model_path
 test_prediction_path = os.path.join(trained_model_output_path,'test_2017_prediction_best_loss.'+target_language)
 
@@ -422,10 +489,53 @@ with open(test_prediction_path,'w') as f:
 #Evalute the final results with nmtpy-coco-metrics
 ground_truth_path = os.path.join(data_path,'test'+dataset_suffix+'.'+target_language)
 
+"""
 print("Full evaluation results with best Loss model:")
 #Execute nmtpy-coco-metrics to get the outputs
 os.system('nmtpy-coco-metrics {} -l {} -r {}'.format(test_prediction_path,target_language,ground_truth_path))
+"""
 
+######################Use the best METEOR Model to Evaluate########################################################
+#Load the Best Loss Model
+best_meteor_model = torch.load(os.path.join(trained_model_output_path,'nmt_wmt_baseline_trained_model_best_METEOR.pt'))
+if use_cuda:
+    best_meteor_model.cuda()
+
+#Convert best_model to eval phase
+best_meteor_model.eval()
+
+test_translations = []
+for test_x,test_y,test_x_lengths,test_y_lengths,test_sorted_index in data_generator(test_data_index,eval_batch_size):
+    test_translation = best_meteor_model.beamsearch_decode(test_x,test_x_lengths,beam_size,MAX_LENGTH)
+
+    #Reorder val_translations and convert them back to words
+    test_translation_reorder = translation_reorder_BPE(test_translation,test_sorted_index,t_id2word) 
+    test_translations += test_translation_reorder
+
+#Compute the test bleu score
+test_bleu = compute_bleu(test_y_ref,test_translations)
+#Compute the METEOR Score
+test_translations_meteor = dict((key,[' '.join(value)]) for key,value in enumerate(test_translations))
+test_meteor = Meteor_Scorer.compute_score(test_y_ref_meteor,test_translations_meteor)
+
+print("Test BLEU score from the best METEOR model: {}".format(test_bleu[0]))
+print("Test METEOR score from the best METEOR model: {}".format(test_meteor[0]))
+
+#Save the translation prediction to the trained_model_path
+test_prediction_path = os.path.join(trained_model_output_path,'test_2017_prediction_best_METEOR.'+target_language)
+
+with open(test_prediction_path,'w') as f:
+    for x in test_translations:
+        f.write(' '.join(x)+'\n')
+
+#Evalute the final results with nmtpy-coco-metrics
+ground_truth_path = os.path.join(data_path,'test'+dataset_suffix+'.'+target_language)
+
+"""
+print("Full evaluation results with best Loss model:")
+#Execute nmtpy-coco-metrics to get the outputs
+os.system('nmtpy-coco-metrics {} -l {} -r {}'.format(test_prediction_path,target_language,ground_truth_path))
+"""
 
 
 

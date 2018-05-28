@@ -53,7 +53,7 @@ class NMT_Seq2Seq_Beam_V2(nn.Module):
     def reset_parameters(self):
         for name, param in self.named_parameters():
             if param.requires_grad and 'bias' not in name and param.data.dim() > 1:
-                nn.init.kaiming_normal(param.data)
+                nn.init.kaiming_normal_(param.data)
     
     def forward(self,src_var,src_lengths,tgt_var, teacher_force_ratio=1.0,max_length=80,criterion=None):
         '''

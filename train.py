@@ -26,10 +26,10 @@ def train_nmt(input_variable,target_variable,input_lengths,model,criterion,optim
 
     #Backpropagate the Loss
     loss.backward()
-    torch.nn.utils.clip_grad_norm(model.parameters(),CLIP)
+    torch.nn.utils.clip_grad_norm_(model.parameters(),CLIP)
     optimizer.step()
 
-    return loss.data[0]
+    return loss.item()
 
 ################################Designed for New Imagine Model######################
 
@@ -43,12 +43,12 @@ def train_imagine_beam(input_variable, target_variable, im_variable, input_lengt
     loss,loss_mt,loss_vse = model(input_variable,input_lengths,target_variable,im_variable,teacher_force_ratio,criterion_mt=criterion_mt, criterion_vse=criterion_vse)
     loss.backward()
     
-    torch.nn.utils.clip_grad_norm(model.parameters(), clip)
+    torch.nn.utils.clip_grad_norm_(model.parameters(), clip)
     
     #Optimize the Encoder and Decoder
     optimizer.step()
     
-    return loss.data[0],loss_mt.data[0],loss_vse.data[0]
+    return loss.data.item(),loss_mt.data.item(),loss_vse.data.item()
 
 def train_imagine_beam_v2(input_variable, target_variable, im_variable, input_lengths,model,optimizer,criterion_mt,criterion_vse,teacher_force_ratio,max_length=MAX_LENGTH,clip=1,optimized_task="mt"):
     #Make model back to trianing 

@@ -88,18 +88,18 @@ class NMT_Decoder(nn.Module):
         #Three matrix to generate a intermediate representation tj for final output
         self.W1 = nn.Linear(hidden_size,embedding_size)
         if self.bias_zero:
-            torch.nn.init.constant(self.W1.bias.data, 0.0)
+            torch.nn.init.constant_(self.W1.bias.data, 0.0)
         self.W2 = nn.Linear(context_size,embedding_size)
         if self.bias_zero:
-            torch.nn.init.constant(self.W2.bias.data, 0.0)
+            torch.nn.init.constant_(self.W2.bias.data, 0.0)
         self.W3 = nn.Linear(embedding_size,embedding_size)
         if self.bias_zero:
-            torch.nn.init.constant(self.W3.bias.data, 0.0)
+            torch.nn.init.constant_(self.W3.bias.data, 0.0)
 
         #Output Layer
         self.out = nn.Linear(embedding_size,output_size)
         if self.bias_zero:
-            torch.nn.init.constant(self.out.bias.data, 0.0)
+            torch.nn.init.constant_(self.out.bias.data, 0.0)
         if self.dropout_out > 0.0:
             self.output_dropout = nn.Dropout(dropout_out)
         if self.tied_emb:

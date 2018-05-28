@@ -221,7 +221,7 @@ dropout_rnn_enc = ARGS.dropout_rnn_enc
 dropout_rnn_dec = ARGS.dropout_rnn_dec
 dropout_emb = ARGS.dropout_emb
 dropout_ctx = ARGS.dropout_ctx
-dropout_out = ARGS.dropout_rnn_dec
+dropout_out = ARGS.dropout_out
 
 #Training Setting
 batch_size = ARGS.batch_size
@@ -232,8 +232,8 @@ weight_decay = ARGS.weight_decay
 loss_w= ARGS.loss_w
 beam_size = ARGS.beam_size
 n_epochs = ARGS.n_epochs
-print_every = ARGS.eval_every
-eval_every = ARGS.save_every
+print_every = ARGS.print_every
+eval_every = ARGS.eval_every
 save_every = ARGS.save_every
 vse_separate = ARGS.vse_separate
 vse_loss_type = ARGS.vse_loss_type #For model V8, we use a different loss called im_retrieval
@@ -429,9 +429,9 @@ for epoch in range(1,n_epochs + 1):
             #Compute Val Loss
             for val_x,val_y,val_im,val_x_lengths,val_y_lengths in data_generator_tl_mtv(val_data_index,val_im_feats,batch_size):
                 val_loss,val_mt_loss,val_vse_loss = imagine_model(val_x,val_x_lengths,val_y,val_im,teacher_force_ratio,criterion_mt=criterion_mt, criterion_vse=criterion_vse)
-                val_print_loss += val_loss.data[0]
-                val_print_mt_loss += val_mt_loss.data[0]
-                val_print_vse_loss += val_vse_loss.data[0]
+                val_print_loss += val_loss.item()
+                val_print_mt_loss += val_mt_loss.item()
+                val_print_vse_loss += val_vse_loss.item()
                 eval_iters += 1
 
             #Generate translation
@@ -497,15 +497,16 @@ for epoch in range(1,n_epochs + 1):
                 torch.save(imagine_model,os.path.join(trained_model_output_path,'nmt_trained_imagine_model_best_BLEU.pt'))
                 #update the best_bleu score
                 best_bleu = val_bleu[0]
+                early_stop = patience
+            else:
+                early_stop -= 1
 
 
             if val_meteor[0] > best_meteor:
-              torch.save(imagine_model,os.path.join(trained_model_output_path,'nmt_trained_imagine_model_best_METEOR.pt'))
-              #update the best_bleu score
-              best_meteor = val_meteor[0]
-              early_stop = patience
-            else:
-              early_stop -= 1
+                torch.save(imagine_model,os.path.join(trained_model_output_path,'nmt_trained_imagine_model_best_METEOR.pt'))
+                #update the best_bleu score
+                best_meteor = val_meteor[0]
+
               
 
 
@@ -567,8 +568,13 @@ print("r1: {}, r5: {}, r10: {}".format(test_r1, test_r5, test_r10))
 
 #Compute the test bleu score
 test_bleu = compute_bleu(test_y_ref,test_translations)
-print("test_bleu from the best BLEU model: {}".format(test_bleu[0]))
+#Compute the METEOR Score
+test_translations_meteor = dict((key,[' '.join(value)]) for key,value in enumerate(test_translations))
+test_meteor = Meteor_Scorer.compute_score(test_y_ref_meteor,test_translations_meteor)
 
+print("Test BLEU score from the best BLEU model: {}".format(test_bleu[0]))
+print("Test METEOR score from the best BLEU model: {}".format(test_meteor[0]))
+print("\n")
 #Save the translation prediction to the trained_model_path
 test_prediction_path = os.path.join(trained_model_output_path,'test_2017_prediction_best_BLEU.'+target_language)
 
@@ -624,8 +630,13 @@ print("r1: {}, r5: {}, r10: {}".format(test_r1, test_r5, test_r10))
 
 #Compute the test bleu score
 test_bleu = compute_bleu(test_y_ref,test_translations)
-print("test_bleu from the best LOSS model: {}".format(test_bleu[0]))
+#Compute the METEOR Score
+test_translations_meteor = dict((key,[' '.join(value)]) for key,value in enumerate(test_translations))
+test_meteor = Meteor_Scorer.compute_score(test_y_ref_meteor,test_translations_meteor)
 
+print("Test BLEU score from the best LOSS model: {}".format(test_bleu[0]))
+print("Test METEOR score from the best LOSS model: {}".format(test_meteor[0]))
+print("\n")
 #Save the translation prediction to the trained_model_path
 test_prediction_path = os.path.join(trained_model_output_path,'test_2017_prediction_best_loss.'+target_language)
 
@@ -643,7 +654,7 @@ os.system('nmtpy-coco-metrics {} -l {} -r {}'.format(test_prediction_path,target
 """
 
 ###########################Use the best METEOR Model to Evaluate#############################################
-#Load the Best Loss Model
+#Load the Best METEOR Model
 best_meteor_model = torch.load(os.path.join(trained_model_output_path,'nmt_trained_imagine_model_best_METEOR.pt'))
 if use_cuda:
     best_meteor_model.cuda()
@@ -681,7 +692,12 @@ print("r1: {}, r5: {}, r10: {}".format(test_r1, test_r5, test_r10))
 
 #Compute the test bleu score
 test_bleu = compute_bleu(test_y_ref,test_translations)
-print("test_bleu from the best METEOR model: {}".format(test_bleu[0]))
+#Compute the METEOR Score
+test_translations_meteor = dict((key,[' '.join(value)]) for key,value in enumerate(test_translations))
+test_meteor = Meteor_Scorer.compute_score(test_y_ref_meteor,test_translations_meteor)
+
+print("Test BLEU score from the best METEOR model: {}".format(test_bleu[0]))
+print("Test METEOR score from the best METEOR model: {}".format(test_meteor[0]))
 
 #Save the translation prediction to the trained_model_path
 test_prediction_path = os.path.join(trained_model_output_path,'test_2017_prediction_best_METEOR.'+target_language)
