@@ -51,6 +51,7 @@ dependencies:
   - nbconvert=5.3.1=py35hc5194e3_0
   - nbformat=4.4.0=py35h12e6e07_0
   - ncurses=6.0=h9df7e31_2
+  - ninja=1.8.2=py35h6bb024c_1
   - notebook=5.2.2=py35he644770_0
   - numpy=1.13.3=py35hd829ed6_0
   - olefile=0.44=py35h2c86149_0
@@ -93,8 +94,8 @@ dependencies:
   - xz=5.2.3=h55aa19d_2
   - zeromq=4.2.2=hbedb6e5_2
   - zlib=1.2.11=ha838bed_2
-  - pytorch=0.3.0=py35_cuda8.0.61_cudnn7.0.3hb362f6e_4
-  - torchvision=0.2.0=py35heaa392f_1
+  - pytorch=0.4.0=py35_cuda8.0.61_cudnn7.1.2_1
+  - torchvision=0.2.1=py35_1
   - pip:
     - cycler==0.10.0
     - kiwisolver==1.0.1
@@ -102,6 +103,6 @@ dependencies:
     - nltk==3.3
     - pyparsing==2.2.0
     - pytz==2018.4
-    - torch==0.3.0.post4
+    - torch==0.4.0
 prefix: /home/zmykevin/miniconda2/envs/machine_translation_vision
 
