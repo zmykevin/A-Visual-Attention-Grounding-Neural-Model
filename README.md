@@ -16,6 +16,7 @@ The code is successfully tested on Ubuntu 16.04 with NVIDIA GPUs and the followi
 
 While we havn't tested this code with other OS system, we expect it can be runned on any Linux Based OS with a minor adjustment. 
 
+One more thing, to properly use the METEOR score to evaluate the model's performance, you will need to download a set of METEOR paraphrase files and store it under the repository of machine_translation_vision/meteor/data. These paraphrase files are available to be download from [here](https://github.com/cmu-mtlab/meteor/tree/master/data).
 ## 3. How to run the code?
 Once you have meet with all the preresuisites, you can start to run our code. The first step is to reconstruct the software environment for the code. We provide a Conda virtual environment file to help users to reconstruct the same software environment as the one we used to run the code. Using the following command to create the same software environment:
 ```
