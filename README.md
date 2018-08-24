@@ -32,10 +32,12 @@ Once you have launched the virtual environment, you can start to run our code. T
 ```
 You need to define at least four things in order to run this code: the directory for the dataset, the directory to save the trained model, the source language, and the target language. The languages that our model can work with include: English=> "en", German->"de" and French->“fr”.
 
+To test a trained model on a test dataset, you can run `test_multimodal.py` and `test_monomodal.py` respectively to evaluate the trained multimodal NMT and trained text-only NMT. You need to modify the parameters in the block of "User Defined Area" according to your own situation. The way to define each parameter is the same as that defined in the training process.
+
 We have the Preprocessed Multi30K Dataset available in this [link](https://drive.google.com/drive/folders/1G645SexvhMsLPJhPAPBjc4FnNF7v3N6w?usp=sharing), which can be downloaded to train the model.
 
-__Last Updated: 5/28/2018__
-### To be Added
-1. Code and Introduction on how to use trained model to test. 
-2. Introduction on how to prepare your own dataset to train the model
-3. Create the script to generate full automatic evaluation results. 
+__Last Updated: 8/24/2018__
+### To be Added 
+1. Introduction on how to prepare your own dataset to train the model
+2. Create the script to generate full automatic evaluation results.
+3. Attach the link to the arxiv version of our paper and the IKEA Dataset
