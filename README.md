@@ -1,6 +1,6 @@
 # A-Visual-Attention-Grounding-Neural-Model
 ## 1. Overview
-This code repository contains the implementation of our research project: _A Visual Attention Grounding Neural Model for Multimodal Machine Translation._
+This code repository contains the implementation of our research project: _![A Visual Attention Grounding Neural Model for Multimodal Machine Translation](https://arxiv.org/abs/1808.08266)._
 
 We introduce a novel multimodal machine translation model that utilizes parallel visual and texture information. Our model jointly optimizes learning of a shared visual-language embedding and translating languages. It does this with the aid of a visual attention grounding mechanism which links the visual semantics in the image with the corresponding textual se-
 mantics.
@@ -36,8 +36,8 @@ To test a trained model on a test dataset, you can run `test_multimodal.py` and 
 
 We have the Preprocessed Multi30K Dataset available in this [link](https://drive.google.com/drive/folders/1G645SexvhMsLPJhPAPBjc4FnNF7v3N6w?usp=sharing), which can be downloaded to train the model.
 
-__Last Updated: 8/24/2018__
+__Last Updated: 9/17/2018__
 ### To be Added 
 1. Introduction on how to prepare your own dataset to train the model
 2. Create the script to generate full automatic evaluation results.
-3. Attach the link to the arxiv version of our paper and the IKEA Dataset
+3. Attach the link to the IKEA Dataset
