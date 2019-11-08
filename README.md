@@ -36,8 +36,11 @@ To test a trained model on a test dataset, you can run `test_multimodal.py` and 
 
 We have the Preprocessed Multi30K Dataset available in this [link](https://drive.google.com/drive/folders/1G645SexvhMsLPJhPAPBjc4FnNF7v3N6w?usp=sharing), which can be downloaded to train the model.
 
+## 4. IKEA Dataset
+The collected product description multimodal machine translation benchmark cralwed from IKEA website is stored under the github repo [here](https://github.com/sampalomad/IKEA-Dataset)
+
+
 __Last Updated: 9/17/2018__
 ### To be Added 
 1. Introduction on how to prepare your own dataset to train the model
 2. Create the script to generate full automatic evaluation results.
-3. Attach the link to the IKEA Dataset
